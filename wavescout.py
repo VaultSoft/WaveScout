@@ -27,11 +27,12 @@ from PyQt6.QtWidgets import (
     QSizePolicy, QFrame, QTableWidget, QTableWidgetItem, QHeaderView,
     QTabWidget, QStyledItemDelegate, QStyleOptionViewItem, QAbstractItemView,
 )
-from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF, QSize
+from PyQt6.QtCore import Qt, QTimer, QPoint, QPointF, QRectF, QSize
 from PyQt6.QtGui import (
     QColor, QPainter, QPen, QBrush, QFont, QIcon, QPixmap, QAction,
-    QPainterPath,
+    QPainterPath, QRadialGradient,
 )
+import math as _math
 
 APP_VERSION = "1.0.0"
 APP_NAME    = "WaveScout"
@@ -1138,6 +1139,42 @@ def make_wifi_icon(pct: float, color: str) -> QIcon:
     return QIcon(pm)
 
 
+def make_brand_icon() -> QIcon:
+    """The WaveScout brand mark — a bold teal radar sweep on a dark squircle
+    tile. Used as the window / taskbar icon (matches icon.ico)."""
+    s = 64.0
+    pm = QPixmap(int(s), int(s)); pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm); p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setBrush(QColor(C["bg1"])); p.setPen(Qt.PenStyle.NoPen)
+    p.drawRoundedRect(QRectF(0, 0, s, s), s*0.22, s*0.22)
+    cx, cy, R = s/2, s/2, s*0.36
+    acc = QColor(C["acc"])
+    p.setPen(QPen(QColor(0, 212, 170, 210), s*0.030, Qt.PenStyle.SolidLine,
+                  Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawEllipse(QPointF(cx, cy), R, R)
+    p.save()
+    clip = QPainterPath(); clip.addEllipse(QPointF(cx, cy), R, R); p.setClipPath(clip)
+    path = QPainterPath(QPointF(cx, cy))
+    path.arcTo(QRectF(cx-R, cy-R, 2*R, 2*R), 48, 60)
+    path.closeSubpath()
+    rg = QRadialGradient(cx, cy, R)
+    rg.setColorAt(0.0, QColor(0, 212, 170, 255))
+    rg.setColorAt(1.0, QColor(0, 212, 170, 95))
+    p.setBrush(QBrush(rg)); p.setPen(Qt.PenStyle.NoPen); p.drawPath(path)
+    p.restore()
+    a = _math.radians(48)
+    p.setPen(QPen(acc, s*0.028, Qt.PenStyle.SolidLine,
+                  Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+    p.drawLine(QPointF(cx, cy), QPointF(cx+R*_math.cos(a), cy-R*_math.sin(a)))
+    p.setBrush(QColor("#EAFBF6")); p.setPen(Qt.PenStyle.NoPen)
+    p.drawEllipse(QPointF(cx+R*0.6*_math.cos(_math.radians(80)),
+                          cy-R*0.6*_math.sin(_math.radians(80))), s*0.034, s*0.034)
+    p.setBrush(acc); p.drawEllipse(QPointF(cx, cy), s*0.042, s*0.042)
+    p.end()
+    return QIcon(pm)
+
+
 # ══════════════════════════════════════════════════════════════════
 # GLOBAL STYLE
 # ══════════════════════════════════════════════════════════════════
@@ -1204,7 +1241,7 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     app.setStyle("Fusion")
     app.setStyleSheet(global_style())
-    app.setWindowIcon(make_wifi_icon(100, C["acc"]))
+    app.setWindowIcon(make_brand_icon())
 
     win = MainWindow()
     win.show()
