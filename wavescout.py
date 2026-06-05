@@ -658,8 +658,10 @@ class TitleBar(QWidget):
         self.setStyleSheet(f"background:{C['bg0']}; border-bottom:1px solid {C['b0']};")
         lay = QHBoxLayout(self); lay.setContentsMargins(16, 0, 8, 0); lay.setSpacing(8)
 
-        dot = QLabel("⬢")
-        dot.setStyleSheet(f"color:{C['acc']}; font-size:16px; background:transparent;")
+        dot = QLabel()
+        dot.setPixmap(make_brand_pixmap(24, tile=False))
+        dot.setFixedSize(24, 24)
+        dot.setStyleSheet("background:transparent;")
         brand = QLabel("WAVE<span style='color:%s'>SCOUT</span>" % C["acc"])
         brand.setTextFormat(Qt.TextFormat.RichText)
         brand.setStyleSheet(
@@ -1139,20 +1141,22 @@ def make_wifi_icon(pct: float, color: str) -> QIcon:
     return QIcon(pm)
 
 
-def make_brand_icon() -> QIcon:
-    """The WaveScout brand mark — a bold teal radar sweep on a dark squircle
-    tile. Used as the window / taskbar icon (matches icon.ico)."""
-    s = 64.0
-    pm = QPixmap(int(s), int(s)); pm.fill(Qt.GlobalColor.transparent)
-    p = QPainter(pm); p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setBrush(QColor(C["bg1"])); p.setPen(Qt.PenStyle.NoPen)
-    p.drawRoundedRect(QRectF(0, 0, s, s), s*0.22, s*0.22)
+def _paint_radar(p: QPainter, s: float, tile: bool = True):
+    """Paint the WaveScout radar mark onto painter ``p`` at size ``s``.
+    When ``tile`` is True a dark squircle backdrop is drawn (for app/exe
+    icons); when False only the glyph is drawn (for inline UI on dark bg)."""
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    if tile:
+        p.setBrush(QColor(C["bg1"])); p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(QRectF(0, 0, s, s), s*0.22, s*0.22)
     cx, cy, R = s/2, s/2, s*0.36
     acc = QColor(C["acc"])
+    # bold outer ring
     p.setPen(QPen(QColor(0, 212, 170, 210), s*0.030, Qt.PenStyle.SolidLine,
                   Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
     p.setBrush(Qt.BrushStyle.NoBrush)
     p.drawEllipse(QPointF(cx, cy), R, R)
+    # solid sweep wedge with radial fade
     p.save()
     clip = QPainterPath(); clip.addEllipse(QPointF(cx, cy), R, R); p.setClipPath(clip)
     path = QPainterPath(QPointF(cx, cy))
@@ -1163,16 +1167,31 @@ def make_brand_icon() -> QIcon:
     rg.setColorAt(1.0, QColor(0, 212, 170, 95))
     p.setBrush(QBrush(rg)); p.setPen(Qt.PenStyle.NoPen); p.drawPath(path)
     p.restore()
+    # bright leading edge
     a = _math.radians(48)
     p.setPen(QPen(acc, s*0.028, Qt.PenStyle.SolidLine,
                   Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
     p.drawLine(QPointF(cx, cy), QPointF(cx+R*_math.cos(a), cy-R*_math.sin(a)))
+    # white blip
     p.setBrush(QColor("#EAFBF6")); p.setPen(Qt.PenStyle.NoPen)
     p.drawEllipse(QPointF(cx+R*0.6*_math.cos(_math.radians(80)),
                           cy-R*0.6*_math.sin(_math.radians(80))), s*0.034, s*0.034)
+    # centre dot
     p.setBrush(acc); p.drawEllipse(QPointF(cx, cy), s*0.042, s*0.042)
+
+
+def make_brand_pixmap(size: int, tile: bool = True) -> QPixmap:
+    pm = QPixmap(size, size); pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    _paint_radar(p, float(size), tile)
     p.end()
-    return QIcon(pm)
+    return pm
+
+
+def make_brand_icon() -> QIcon:
+    """The WaveScout brand mark — a bold teal radar sweep on a dark squircle
+    tile. Used as the window / taskbar icon (matches icon.ico)."""
+    return QIcon(make_brand_pixmap(64, tile=True))
 
 
 # ══════════════════════════════════════════════════════════════════
