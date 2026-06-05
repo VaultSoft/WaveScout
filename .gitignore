@@ -1,0 +1,18 @@
+# Build artifacts
+build/
+dist/
+*.spec.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Portable package (published as a GitHub release asset, not committed)
+*.zip
+
+# Logs / scratch
+*.log
+run_stdout.log
