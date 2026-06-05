@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaveScout — Free Portable WiFi Analyser for Windows</title>
+  <meta name="description" content="Free, portable WiFi analyser for Windows. Scan nearby networks, visualise signal strength, find the least-congested channel and monitor your connection live. No installation required.">
+  <link rel="canonical" href="https://vaultsoft.github.io/WaveScout/">
+  <meta property="og:title" content="WaveScout — Free WiFi Analyser for Windows">
+  <meta property="og:description" content="Scan nearby networks, check signal strength, find the best channel and monitor your connection live. Free & portable.">
+  <meta property="og:image" content="https://vaultsoft.github.io/WaveScout/logo.png">
+  <meta property="og:url" content="https://vaultsoft.github.io/WaveScout/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "WaveScout",
+    "description": "Free, portable WiFi analyser for Windows. Scan nearby networks, visualise signal strength, find the least-congested channel and monitor your connection live. No installation required.",
+    "operatingSystem": "Windows 10, Windows 11",
+    "applicationCategory": "UtilitiesApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "url": "https://vaultsoft.github.io/WaveScout/",
+    "downloadUrl": "https://github.com/VaultSoft/WaveScout/releases/download/v1.0.0/WaveScout_v1.0.0_Portable.zip",
+    "softwareVersion": "1.0.0",
+    "author": {
+      "@type": "Organization",
+      "name": "VaultSoft",
+      "url": "https://vaultsoft.github.io/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is WaveScout free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, completely. WaveScout is free to download and use forever. There's no trial period, no premium tier, and no subscription. You can support development on Ko-fi if you'd like, but it's entirely optional."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does WaveScout need to be installed?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. WaveScout is fully portable — just download the .zip, extract it and run WaveScout.exe. No installer, no Python and no runtime dependencies. It even runs off a USB drive."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does WaveScout need admin rights?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. WaveScout scans WiFi using the built-in Windows networking commands, which don't require administrator rights. Just run the .exe as your normal user account."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why do I need to turn Location Services on?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "This is a Windows requirement, not a WaveScout one. Since Windows 10, Microsoft requires Location Services to be enabled for ANY application to read WiFi scan results (because nearby networks can reveal your location). WaveScout never collects or transmits your location — it only reads the network list locally. If Location is off, WaveScout shows a clear banner; enable it under Settings > Privacy & security > Location and the network list fills in automatically."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does WaveScout work on Windows 11?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. WaveScout runs on both Windows 10 and Windows 11 (64-bit). It's tested on both and works with the latest Windows updates."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is WaveScout safe? Will my antivirus flag it?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WaveScout is safe. Because it's a portable .exe built with PyInstaller, some antivirus software may flag it as a false positive — this is a known quirk with Python-packaged apps, not a sign of anything malicious. WaveScout only reads your WiFi network list locally; it has no servers and sends no data anywhere. The full source code is on GitHub for anyone to review."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #07091A;
+      --bg-card:  #0C1428;
+      --bg-card2: #101C38;
+      --border:   rgba(255,255,255,0.06);
+      --border-hi:rgba(255,255,255,0.13);
+      --accent:   #00D4AA;
+      --accent-d: rgba(0,212,170,0.09);
+      --accent-g: rgba(0,212,170,0.20);
+      --red:      #FF6464;
+      --blue:     #6EA8FF;
+      --orange:   #FF8C65;
+      --amber:    #F0A500;
+      --green:    #2ECC71;
+      --text:     #DDE8FF;
+      --muted:    #6B8199;
+      --dim:      #33506A;
+      --r:        12px;
+      --r-lg:     18px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── NAVBAR ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 6%; height: 64px;
+      background: rgba(7,9,26,0.88);
+      backdrop-filter: blur(18px) saturate(160%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .nav-brand img { width: 30px; height: 30px; border-radius: 7px; }
+    .nav-brand span {
+      font-size: 1rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em;
+    }
+
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      font-size: 0.85rem; font-weight: 500;
+      color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border);
+      transition: color 0.18s, border-color 0.18s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
+
+    .btn-accent {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 18px; border-radius: 8px;
+      font-size: 0.875rem; font-weight: 700;
+      color: #07091A; background: var(--accent);
+      text-decoration: none; border: none; cursor: pointer;
+      box-shadow: 0 0 22px var(--accent-g);
+      transition: opacity 0.18s, transform 0.15s, box-shadow 0.18s;
+    }
+    .btn-accent:hover {
+      opacity: 0.88; transform: translateY(-1px);
+      box-shadow: 0 6px 28px var(--accent-g);
+    }
+
+    .btn-kofi {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 18px; border-radius: 8px;
+      font-size: 0.875rem; font-weight: 700;
+      color: #fff; background: #FF5E5B;
+      text-decoration: none; border: none; cursor: pointer;
+      box-shadow: 0 0 18px rgba(255,94,91,0.28);
+      transition: opacity 0.18s, transform 0.15s, box-shadow 0.18s;
+      white-space: nowrap;
+    }
+    .btn-kofi:hover {
+      opacity: 0.88; transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(255,94,91,0.40);
+    }
+
+    /* ─── HERO ─── */
+    #hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding: 96px 6% 72px;
+      position: relative; overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute; pointer-events: none;
+      width: 900px; height: 900px;
+      top: 50%; left: 40%;
+      transform: translate(-50%, -60%);
+      background: radial-gradient(circle, rgba(0,212,170,0.055) 0%, transparent 65%);
+    }
+
+    .hero-grid {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,212,170,0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,170,0.028) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, black 30%, transparent 100%);
+    }
+
+    .hero-inner {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 64px; align-items: center;
+      max-width: 1200px; margin: 0 auto; width: 100%;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 13px; margin-bottom: 22px;
+      background: var(--accent-d);
+      border: 1px solid rgba(0,212,170,0.22);
+      border-radius: 100px;
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+    h1 {
+      font-size: clamp(2.1rem, 4.2vw, 3.4rem);
+      font-weight: 900; line-height: 1.06;
+      letter-spacing: -0.04em; color: #fff; margin-bottom: 20px;
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+
+    .hero-body {
+      font-size: 1.08rem; color: var(--muted);
+      line-height: 1.7; margin-bottom: 36px; max-width: 460px;
+    }
+
+    .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px; }
+
+    .btn-accent-lg { padding: 13px 28px; font-size: 1rem; border-radius: 10px; }
+
+    .hero-pills {
+      display: flex; gap: 28px; flex-wrap: wrap;
+    }
+    .pill { display: flex; flex-direction: column; }
+    .pill strong {
+      font-size: 1.35rem; font-weight: 800; line-height: 1.1;
+      color: var(--accent);
+    }
+    .pill span {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--muted);
+    }
+
+    /* ─── APP MOCKUP ─── */
+    .mockup-outer {
+      display: flex; justify-content: center; align-items: center;
+      position: relative;
+    }
+    .mockup-glow {
+      position: absolute; inset: -60px; pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0,212,170,0.09) 0%, transparent 65%);
+    }
+
+    .app-window {
+      position: relative; z-index: 1;
+      background: #080F20;
+      border: 1px solid rgba(0,212,170,0.22);
+      border-radius: 14px; overflow: hidden;
+      width: 320px;
+      box-shadow:
+        0 0 0 1px rgba(0,212,170,0.08),
+        0 24px 70px rgba(0,0,0,0.55),
+        0 0 100px rgba(0,212,170,0.05);
+      font-size: 0.78rem;
+    }
+
+    .win-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 13px;
+      background: #060D1C;
+      border-bottom: 1px solid rgba(0,212,170,0.1);
+    }
+    .win-title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.68rem; font-weight: 700; color: var(--accent);
+      letter-spacing: 0.06em;
+    }
+
+    .win-btns { display: flex; gap: 5px; }
+    .win-btn {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--dim);
+    }
+    .win-btn.live { background: rgba(0,212,170,0.45); }
+
+    .win-body { padding: 14px; display: flex; flex-direction: column; gap: 11px; }
+
+    /* WiFi network row */
+    .n-row { display: flex; flex-direction: column; gap: 5px; }
+    .n-head { display: flex; justify-content: space-between; align-items: center; }
+    .n-ssid { display: flex; align-items: center; gap: 6px; color: var(--text); font-weight: 600; }
+    .n-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .n-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .n-bar { height: 4px; border-radius: 100px; background: rgba(255,255,255,0.06); overflow: hidden; }
+    .n-fill { height: 100%; border-radius: 100px; }
+    .n-sub { font-size: 0.64rem; color: var(--dim); padding-left: 2px; }
+
+    .f-strong { background: var(--accent); animation: sigA 4s ease-in-out infinite; }
+    @keyframes sigA { 0%,100%{width:86%} 50%{width:92%} }
+    .f-good { background: var(--green); animation: sigB 6s ease-in-out infinite; }
+    @keyframes sigB { 0%,100%{width:62%} 50%{width:68%} }
+    .f-fair { background: var(--amber); animation: sigC 7s ease-in-out infinite; }
+    @keyframes sigC { 0%,100%{width:44%} 50%{width:50%} }
+    .f-poor { background: var(--red); animation: sigD 5s ease-in-out infinite; }
+    @keyframes sigD { 0%,100%{width:24%} 50%{width:30%} }
+
+    .win-foot {
+      display: flex; justify-content: space-between;
+      padding: 8px 13px;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.63rem; color: var(--dim);
+    }
+    .live-dot {
+      display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent); margin-right: 4px;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    /* channel bars mini chart */
+    .ch-chart { display: flex; align-items: flex-end; gap: 5px; height: 84px; padding: 4px 2px 0; }
+    .ch-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .ch-bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--border-hi); }
+    .ch-bar.best { background: var(--accent); }
+    .ch-num { font-size: 0.6rem; color: var(--dim); }
+    .ch-num.best { color: var(--accent); font-weight: 700; }
+
+    /* ─── SECTION BASE ─── */
+    section { padding: 96px 6%; }
+    .inner { max-width: 1200px; margin: 0 auto; }
+
+    .s-label {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+    .s-title {
+      font-size: clamp(1.7rem, 2.8vw, 2.5rem);
+      font-weight: 800; letter-spacing: -0.03em; color: #fff;
+      line-height: 1.1; margin-bottom: 12px;
+    }
+    .s-sub {
+      font-size: 1rem; color: var(--muted); max-width: 560px; line-height: 1.65;
+    }
+    .s-head { margin-bottom: 52px; }
+    .s-head.center { text-align: center; }
+    .s-head.center .s-sub { margin: 0 auto; }
+
+    /* ─── FEATURES ─── */
+    #features { background: linear-gradient(180deg, #060916 0%, var(--bg) 100%); }
+
+    .feat-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 18px;
+    }
+
+    .feat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 26px;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    }
+    .feat-card:hover {
+      border-color: rgba(0,212,170,0.18);
+      background: var(--bg-card2); transform: translateY(-3px);
+    }
+
+    .feat-icon {
+      width: 44px; height: 44px; border-radius: 10px; margin-bottom: 16px;
+      background: var(--accent-d);
+      border: 1px solid rgba(0,212,170,0.14);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .feat-icon svg { width: 22px; height: 22px; }
+
+    .feat-card h3 {
+      font-size: 0.97rem; font-weight: 700; color: #fff; margin-bottom: 7px;
+    }
+    .feat-card p { font-size: 0.855rem; color: var(--muted); line-height: 1.6; }
+
+    /* ─── SCREENSHOTS ─── */
+    #screenshots { background: var(--bg); }
+
+    .shots-grid {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 16px;
+      min-height: 540px;
+    }
+
+    .shot {
+      border-radius: var(--r-lg); overflow: hidden;
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, #0A1220, #07091C);
+      display: flex; align-items: center; justify-content: center;
+      padding: 28px;
+    }
+    .shot-main { grid-row: 1 / 3; }
+    .shot-note {
+      text-align: center; margin-top: 22px;
+      font-size: 0.8rem; color: var(--dim);
+    }
+
+    /* ─── REQUIREMENTS ─── */
+    #requirements { background: linear-gradient(180deg, var(--bg) 0%, #060916 100%); }
+
+    .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; align-items: start; }
+
+    .req-list { list-style: none; display: flex; flex-direction: column; gap: 13px; }
+    .req-list li {
+      display: flex; align-items: center; gap: 11px;
+      font-size: 0.93rem; color: var(--text);
+    }
+    .check {
+      flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent-d);
+      border: 1px solid rgba(0,212,170,0.2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .check svg { width: 10px; height: 10px; }
+
+    .compat-box {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 28px;
+    }
+    .compat-box h4 {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 18px;
+    }
+    .compat-list { display: flex; flex-direction: column; gap: 10px; }
+    .compat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 13px; border-radius: 9px;
+      background: var(--bg-card2); font-size: 0.855rem; color: var(--text);
+    }
+    .compat-tag {
+      font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+      background: rgba(0,212,170,0.1); color: var(--accent);
+    }
+
+    /* ─── CTA ─── */
+    #cta {
+      text-align: center; background: var(--bg);
+      padding: 110px 6%; position: relative; overflow: hidden;
+    }
+    #cta::before {
+      content: '';
+      position: absolute; bottom: -180px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 700px; pointer-events: none;
+      background: radial-gradient(circle, rgba(0,212,170,0.065) 0%, transparent 65%);
+    }
+    #cta .inner { position: relative; z-index: 1; }
+    #cta h2 {
+      font-size: clamp(2rem, 3.8vw, 3.1rem);
+      font-weight: 900; letter-spacing: -0.04em; color: #fff; margin-bottom: 14px;
+    }
+    #cta p { color: var(--muted); font-size: 1.05rem; margin-bottom: 36px; }
+    .cta-note { font-size: 0.78rem; color: var(--dim); margin-top: 16px; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 30px 6%;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .footer-brand img { width: 28px; height: 28px; border-radius: 6px; opacity: 0.75; }
+    .footer-brand-copy { display: flex; flex-direction: column; line-height: 1.25; }
+    .footer-brand-copy strong { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .footer-brand-copy small { font-size: 0.7rem; color: var(--muted); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a {
+      font-size: 0.8rem; color: var(--muted); text-decoration: none;
+      transition: color 0.18s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { font-size: 0.73rem; color: var(--dim); }
+
+    /* ─── FAQ ─── */
+    #faq { background: linear-gradient(180deg, #060916 0%, var(--bg) 100%); }
+
+    .faq-list {
+      display: flex; flex-direction: column;
+      max-width: 780px; margin: 0 auto;
+    }
+    .faq-item {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      font-size: 1.02rem; font-weight: 700; color: #fff;
+      margin-bottom: 10px; letter-spacing: -0.01em;
+    }
+    .faq-a { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 940px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .mockup-outer { display: none; }
+      .feat-grid { grid-template-columns: repeat(2, 1fr); }
+      .shots-grid { grid-template-columns: 1fr; grid-template-rows: auto; min-height: auto; }
+      .shot-main { grid-row: auto; }
+      .req-grid { grid-template-columns: 1fr; gap: 32px; }
+    }
+    @media (max-width: 600px) {
+      nav { padding: 0 4%; }
+      .nav-right .btn-ghost { display: none; }
+      section { padding: 72px 4%; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .hero-pills { gap: 20px; }
+    }
+  </style>
+  <meta name="google-site-verification" content="oIq8zumOk-iTSBzpkufmUh6XNeCO5u4swH96b8GTHho" />
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav>
+  <a class="nav-brand" href="#">
+    <img src="logo.png" alt="WaveScout">
+    <span>WaveScout</span>
+  </a>
+  <div class="nav-right">
+    <a class="btn-ghost" href="https://vaultsoft.github.io/" target="_blank" rel="noopener noreferrer">
+      Home
+    </a>
+    <a class="btn-ghost" href="https://github.com/VaultSoft/WaveScout" target="_blank" rel="noopener noreferrer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.582.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+      </svg>
+      GitHub
+    </a>
+    <a class="btn-accent" href="https://github.com/VaultSoft/WaveScout/releases/download/v1.0.0/WaveScout_v1.0.0_Portable.zip">
+      Download Free
+    </a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-grid" aria-hidden="true"></div>
+
+  <div class="hero-inner">
+    <!-- Left: copy -->
+    <div>
+      <div class="badge"><span class="dot" aria-hidden="true"></span>Free for Windows 10 &amp; 11</div>
+
+      <h1>Free WiFi Analyser for Windows —<br><em>see every network, find the best channel.</em></h1>
+
+      <p class="hero-body">
+        Scan nearby WiFi networks, visualise signal strength, spot the least-congested
+        channel and watch your connection live — in a clean, dark, no-nonsense app.
+        No install. No admin rights. Just run it.
+      </p>
+
+      <div class="hero-ctas">
+        <a class="btn-accent btn-accent-lg" href="https://github.com/VaultSoft/WaveScout/releases/download/v1.0.0/WaveScout_v1.0.0_Portable.zip">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Free
+        </a>
+        <a class="btn-ghost" href="https://github.com/VaultSoft/WaveScout" target="_blank" rel="noopener noreferrer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.582.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          View on GitHub
+        </a>
+        <p style="flex-basis:100%;font-size:0.78rem;color:var(--muted);margin:6px 0 0;">Free forever. If it helps you get a better signal, a coffee is always appreciated ☕ — <a href="https://ko-fi.com/vaultsoft" target="_blank" rel="noopener noreferrer" style="color:var(--muted);text-decoration:underline;text-underline-offset:3px;">Support on Ko-fi</a></p>
+      </div>
+
+      <div class="hero-pills">
+        <div class="pill"><strong>v1.0.0</strong><span>Latest</span></div>
+        <div class="pill"><strong>Free</strong><span>Always</span></div>
+        <div class="pill"><strong>2.4 / 5 / 6</strong><span>GHz bands</span></div>
+        <div class="pill"><strong>Portable</strong><span>No installer</span></div>
+      </div>
+    </div>
+
+    <!-- Right: live app mockup (network table) -->
+    <div class="mockup-outer" aria-hidden="true">
+      <div class="mockup-glow"></div>
+      <div class="app-window">
+        <div class="win-bar">
+          <div class="win-title">WAVESCOUT v1.0.0</div>
+          <div class="win-btns">
+            <div class="win-btn"></div>
+            <div class="win-btn"></div>
+            <div class="win-btn live"></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="n-row">
+            <div class="n-head">
+              <span class="n-ssid"><span class="n-dot" style="background:var(--accent)"></span>HomeNet-5G</span>
+              <span class="n-val" style="color:var(--accent)">89%</span>
+            </div>
+            <div class="n-bar"><div class="n-fill f-strong"></div></div>
+            <div class="n-sub">Ch 108 &nbsp;·&nbsp; 5 GHz &nbsp;·&nbsp; WPA2 &nbsp;·&nbsp; −56 dBm</div>
+          </div>
+          <div class="n-row">
+            <div class="n-head">
+              <span class="n-ssid"><span class="n-dot" style="background:var(--green)"></span>HomeNet</span>
+              <span class="n-val" style="color:var(--green)">64%</span>
+            </div>
+            <div class="n-bar"><div class="n-fill f-good"></div></div>
+            <div class="n-sub">Ch 11 &nbsp;·&nbsp; 2.4 GHz &nbsp;·&nbsp; WPA2 &nbsp;·&nbsp; −68 dBm</div>
+          </div>
+          <div class="n-row">
+            <div class="n-head">
+              <span class="n-ssid"><span class="n-dot" style="background:var(--amber)"></span>FibreHub_3E38</span>
+              <span class="n-val" style="color:var(--amber)">47%</span>
+            </div>
+            <div class="n-bar"><div class="n-fill f-fair"></div></div>
+            <div class="n-sub">Ch 36 &nbsp;·&nbsp; 5 GHz &nbsp;·&nbsp; WPA3 &nbsp;·&nbsp; −77 dBm</div>
+          </div>
+          <div class="n-row">
+            <div class="n-head">
+              <span class="n-ssid"><span class="n-dot" style="background:var(--red)"></span>CafeWiFi</span>
+              <span class="n-val" style="color:var(--red)">22%</span>
+            </div>
+            <div class="n-bar"><div class="n-fill f-poor"></div></div>
+            <div class="n-sub">Ch 6 &nbsp;·&nbsp; 2.4 GHz &nbsp;·&nbsp; Open &nbsp;·&nbsp; −89 dBm</div>
+          </div>
+        </div>
+        <div class="win-foot">
+          <span><span class="live-dot"></span>8 networks</span>
+          <span>Best 2.4 GHz: Ch 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURES ═══ -->
+<section id="features">
+  <div class="inner">
+    <div class="s-head center">
+      <div class="s-label">Features</div>
+      <h2 class="s-title">Everything you need to fix your WiFi</h2>
+      <p class="s-sub">Built for anyone tired of dead zones and buffering. A modern, free alternative to WiFi Analyzer Pro, NetSpot and inSSIDer — same insight, none of the price tag or bloat.</p>
+    </div>
+    <div class="feat-grid">
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
+          </svg>
+        </div>
+        <h3>Network Scanning</h3>
+        <p>Auto-detects every nearby WiFi network every 5 seconds — SSID, BSSID, channel, band and security (Open, WEP, WPA, WPA2, WPA3) in one live table.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/>
+            <line x1="18" y1="20" x2="18" y2="4"/>
+          </svg>
+        </div>
+        <h3>Signal Strength Visualisation</h3>
+        <p>Every network gets a colour-coded signal bar — teal for excellent down to red for poor — plus an estimated dBm reading, so you can see strength at a glance.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="4" y1="20" x2="4" y2="12"/><line x1="9" y1="20" x2="9" y2="16"/>
+            <line x1="14" y1="20" x2="14" y2="9"/><line x1="19" y1="20" x2="19" y2="14"/>
+            <line x1="2" y1="20" x2="22" y2="20"/>
+          </svg>
+        </div>
+        <h3>Channel Congestion Chart</h3>
+        <p>Visual bar charts for the 2.4 GHz and 5 GHz bands show exactly how many networks crowd each channel — instantly revealing the busy ones to avoid.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="3" x2="12" y2="1"/><polyline points="9 6 12 3 15 6"/>
+          </svg>
+        </div>
+        <h3>Best Channel Recommendation</h3>
+        <p>WaveScout highlights the least-congested channel in teal and tells you the best channel for each band, so you can reconfigure your router with confidence.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <h3>Live Signal Graph</h3>
+        <p>A rolling 60-second graph plots the signal of your selected or connected network in real time — perfect for walking around to find dead spots.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="7" y1="13" x2="11" y2="13"/><line x1="7" y1="16" x2="14" y2="16"/>
+          </svg>
+        </div>
+        <h3>Connection Details Panel</h3>
+        <p>See your current connection at a glance: SSID, signal, channel, band, security, IP address, gateway and DNS — pinned right at the top.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SCREENSHOTS ═══ -->
+<section id="screenshots">
+  <div class="inner">
+    <div class="s-head">
+      <div class="s-label">Preview</div>
+      <h2 class="s-title">Dark. Clean. Information-dense.</h2>
+      <p class="s-sub">A focused interface that shows you everything about the airwaves around you — without drowning you in jargon.</p>
+    </div>
+
+    <div class="shots-grid">
+      <!-- Main: network table -->
+      <div class="shot shot-main">
+        <div class="app-window" style="width:330px; font-size:0.82rem;" aria-label="WaveScout — network table">
+          <div class="win-bar">
+            <div class="win-title">WAVESCOUT — NETWORKS</div>
+            <div class="win-btns"><div class="win-btn"></div><div class="win-btn"></div><div class="win-btn live"></div></div>
+          </div>
+          <div class="win-body">
+            <div class="n-row">
+              <div class="n-head"><span class="n-ssid"><span class="n-dot" style="background:var(--accent)"></span>HomeNet-5G</span><span class="n-val" style="color:var(--accent)">89%</span></div>
+              <div class="n-bar"><div class="n-fill f-strong"></div></div>
+              <div class="n-sub">Ch 108 &nbsp;·&nbsp; 5 GHz &nbsp;·&nbsp; WPA2 &nbsp;·&nbsp; −56 dBm</div>
+            </div>
+            <div class="n-row">
+              <div class="n-head"><span class="n-ssid"><span class="n-dot" style="background:var(--green)"></span>HomeNet</span><span class="n-val" style="color:var(--green)">64%</span></div>
+              <div class="n-bar"><div class="n-fill f-good"></div></div>
+              <div class="n-sub">Ch 11 &nbsp;·&nbsp; 2.4 GHz &nbsp;·&nbsp; WPA2 &nbsp;·&nbsp; −68 dBm</div>
+            </div>
+            <div class="n-row">
+              <div class="n-head"><span class="n-ssid"><span class="n-dot" style="background:var(--amber)"></span>FibreHub_3E38</span><span class="n-val" style="color:var(--amber)">47%</span></div>
+              <div class="n-bar"><div class="n-fill f-fair"></div></div>
+              <div class="n-sub">Ch 36 &nbsp;·&nbsp; 5 GHz &nbsp;·&nbsp; WPA3 &nbsp;·&nbsp; −77 dBm</div>
+            </div>
+            <div class="n-row">
+              <div class="n-head"><span class="n-ssid"><span class="n-dot" style="background:var(--red)"></span>CafeWiFi</span><span class="n-val" style="color:var(--red)">22%</span></div>
+              <div class="n-bar"><div class="n-fill f-poor"></div></div>
+              <div class="n-sub">Ch 6 &nbsp;·&nbsp; 2.4 GHz &nbsp;·&nbsp; Open &nbsp;·&nbsp; −89 dBm</div>
+            </div>
+          </div>
+          <div class="win-foot"><span><span class="live-dot"></span>Live · 8 networks</span><span>Rescan 5s</span></div>
+        </div>
+      </div>
+
+      <!-- Side 1: channel congestion -->
+      <div class="shot" aria-label="WaveScout — channel congestion">
+        <div class="app-window" style="width:100%;max-width:270px;font-size:0.78rem;">
+          <div class="win-bar">
+            <div class="win-title">CHANNELS — 2.4 GHz</div>
+            <div class="win-btns"><div class="win-btn"></div><div class="win-btn"></div><div class="win-btn live"></div></div>
+          </div>
+          <div class="win-body" style="gap:8px;">
+            <div class="ch-chart">
+              <div class="ch-col"><div class="ch-bar best" style="height:14px"></div><div class="ch-num best">1</div></div>
+              <div class="ch-col"><div class="ch-bar" style="height:34px"></div><div class="ch-num">3</div></div>
+              <div class="ch-col"><div class="ch-bar" style="height:58px"></div><div class="ch-num">6</div></div>
+              <div class="ch-col"><div class="ch-bar" style="height:40px"></div><div class="ch-num">9</div></div>
+              <div class="ch-col"><div class="ch-bar" style="height:66px"></div><div class="ch-num">11</div></div>
+            </div>
+            <div class="n-sub" style="color:var(--accent);font-weight:700;padding-left:0;">Best channel for you: Ch 1</div>
+          </div>
+          <div class="win-foot"><span><span class="live-dot"></span>Live</span><span>5 channels in use</span></div>
+        </div>
+      </div>
+
+      <!-- Side 2: connection panel -->
+      <div class="shot" aria-label="WaveScout — your connection">
+        <div class="app-window" style="width:100%;max-width:270px;font-size:0.78rem;">
+          <div class="win-bar">
+            <div class="win-title">YOUR CONNECTION</div>
+            <div class="win-btns"><div class="win-btn"></div><div class="win-btn"></div><div class="win-btn live"></div></div>
+          </div>
+          <div class="win-body" style="gap:7px;">
+            <div class="n-head"><span class="n-ssid" style="color:#fff;font-weight:800;">HomeNet-5G</span><span class="n-val" style="color:var(--accent)">89%</span></div>
+            <div class="n-bar"><div class="n-fill f-strong"></div></div>
+            <div class="n-sub" style="padding-left:0;line-height:1.9;">
+              Channel <b style="color:var(--text)">108</b> &nbsp;·&nbsp; Band <b style="color:var(--text)">5 GHz</b><br>
+              Security <b style="color:var(--text)">WPA2</b> &nbsp;·&nbsp; −56 dBm<br>
+              IP <b style="color:var(--text)">10.2.0.2</b><br>
+              Gateway <b style="color:var(--text)">10.2.0.1</b><br>
+              DNS <b style="color:var(--text)">10.2.0.1</b>
+            </div>
+          </div>
+          <div class="win-foot"><span><span class="live-dot"></span>Connected</span><span>WiFi</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="shot-note">Illustrative mockups — annotated screenshots of the real app are coming soon.</p>
+  </div>
+</section>
+
+<!-- ═══ REQUIREMENTS ═══ -->
+<section id="requirements">
+  <div class="inner">
+    <div class="req-grid">
+      <div>
+        <div class="s-label">Requirements</div>
+        <h2 class="s-title">Runs on anything<br>that runs Windows.</h2>
+        <p class="s-sub" style="margin-bottom:32px;">WaveScout uses the WiFi networking built into Windows, so there's nothing extra to install and nothing to configure.</p>
+        <ul class="req-list">
+          <li>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+            Windows 10 or Windows 11 (64-bit)
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+            A WiFi adapter (built-in or USB)
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+            No Python or runtime dependencies
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+            No admin rights or installation needed
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+            Location Services enabled (a Windows rule for all WiFi tools)
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+            Works on laptops, desktops and tablets
+          </li>
+        </ul>
+      </div>
+      <div class="compat-box">
+        <h4>What WaveScout Detects</h4>
+        <div class="compat-list">
+          <div class="compat-row"><span>2.4 GHz networks &amp; channels</span><span class="compat-tag">Supported</span></div>
+          <div class="compat-row"><span>5 GHz networks &amp; channels</span><span class="compat-tag">Supported</span></div>
+          <div class="compat-row"><span>6 GHz (WiFi 6E) networks</span><span class="compat-tag">Supported</span></div>
+          <div class="compat-row"><span>WPA2 &amp; WPA3 security</span><span class="compat-tag">Supported</span></div>
+          <div class="compat-row"><span>Open &amp; WEP networks</span><span class="compat-tag">Supported</span></div>
+          <div class="compat-row"><span>Hidden SSIDs &amp; multiple BSSIDs</span><span class="compat-tag">Supported</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section id="cta">
+  <div class="inner">
+    <h2>Ready to find the best channel?</h2>
+    <p>Free download. No install. Scanning in seconds.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center;">
+      <a class="btn-accent" style="padding:15px 38px;font-size:1.05rem;border-radius:11px;display:inline-flex;" href="https://github.com/VaultSoft/WaveScout/releases/download/v1.0.0/WaveScout_v1.0.0_Portable.zip">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download Free
+      </a>
+      <a class="btn-kofi" style="padding:15px 28px;font-size:1.05rem;border-radius:11px;" href="https://ko-fi.com/vaultsoft" target="_blank" rel="noopener noreferrer">
+        ☕ Support on Ko-fi
+      </a>
+    </div>
+    <p class="cta-note">Windows 10 / 11 &nbsp;·&nbsp; No install required &nbsp;·&nbsp; v1.0.0</p>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section id="faq">
+  <div class="inner">
+    <div class="s-head center">
+      <div class="s-label">FAQ</div>
+      <h2 class="s-title">Common questions</h2>
+    </div>
+    <div class="faq-list">
+
+      <div class="faq-item">
+        <h3 class="faq-q">Is WaveScout free?</h3>
+        <p class="faq-a">Yes, completely. WaveScout is free to download and use forever — no trial period, no premium tier, no subscription. You can support development on Ko-fi if you'd like, but it's entirely optional.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3 class="faq-q">Does it need to be installed?</h3>
+        <p class="faq-a">No. WaveScout is fully portable — just download the .zip, extract it and run WaveScout.exe. No installer, no Python and no runtime dependencies. It even runs off a USB drive.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3 class="faq-q">Does it need admin rights?</h3>
+        <p class="faq-a">No. WaveScout scans WiFi using the networking commands built into Windows, which don't require administrator rights. Just run the .exe under your normal user account.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3 class="faq-q">Why do I need to turn Location Services on?</h3>
+        <p class="faq-a">That's a Windows rule, not a WaveScout one. Since Windows 10, Microsoft requires Location Services to be enabled before <em>any</em> app can read WiFi scan results, because the list of nearby networks can be used to estimate location. WaveScout never collects or sends your location anywhere — it only reads the network list locally on your PC. If Location is off, WaveScout shows a clear banner; switch it on under Settings → Privacy &amp; security → Location and the networks appear automatically.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3 class="faq-q">Does it work on Windows 11?</h3>
+        <p class="faq-a">Yes. WaveScout runs on both Windows 10 and Windows 11 (64-bit). It's tested on both and keeps up with the latest Windows updates.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3 class="faq-q">Is it safe? Will my antivirus flag it?</h3>
+        <p class="faq-a">WaveScout is safe. Because it's a portable .exe built with PyInstaller, some antivirus tools may raise a false positive — a known quirk with Python-packaged apps, not a sign of anything malicious. WaveScout has no servers and sends no data anywhere; it only reads your WiFi network list locally. The full source code is on GitHub for anyone to review.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ALSO BY VAULTSOFT ═══ -->
+<section style="background:#0D1117; padding:60px 24px; text-align:center; border-top:1px solid #21262D;">
+  <p style="color:#7D8590; font-size:11px; font-weight:700; letter-spacing:1.2px; margin-bottom:24px;">ALSO BY VAULTSOFT</p>
+  <div style="display:inline-flex; align-items:center; gap:20px; background:#161B22; border:1px solid #21262D; border-radius:14px; padding:20px 28px;">
+    <div style="text-align:left;">
+      <div style="color:#E6EDF3; font-size:16px; font-weight:700; margin-bottom:4px;">PulseMonitor</div>
+      <div style="color:#7D8590; font-size:13px; margin-bottom:12px;">Free real-time PC health monitor</div>
+      <a href="https://vaultsoft.github.io/PulseMonitor/"
+         style="background:#00D4AA; color:#0D1117; padding:8px 18px; border-radius:7px; font-size:12px; font-weight:700; text-decoration:none;">
+        View App
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <a class="footer-brand" href="https://github.com/VaultSoft" target="_blank" rel="noopener noreferrer">
+    <img src="assets/Vault_Soft_Logo.png" alt="VaultSoft logo">
+    <div class="footer-brand-copy">
+      <strong>VaultSoft</strong>
+      <small>Useful software, free and simple.</small>
+    </div>
+  </a>
+  <div class="footer-links">
+    <a href="https://github.com/VaultSoft/WaveScout" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a href="https://github.com/VaultSoft/WaveScout/issues/new" target="_blank" rel="noopener noreferrer">Report a Bug</a>
+    <a href="https://github.com/VaultSoft/WaveScout/releases/latest" target="_blank" rel="noopener noreferrer">Download</a>
+  </div>
+  <a class="btn-kofi" style="font-size:0.8rem;padding:7px 15px;border-radius:7px;" href="https://ko-fi.com/vaultsoft" target="_blank" rel="noopener noreferrer">
+    ☕ Support on Ko-fi
+  </a>
+  <p class="footer-copy">© 2026 VaultSoft. All rights reserved.</p>
+</footer>
+
+</body>
+</html>
