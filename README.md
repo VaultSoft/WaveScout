@@ -8,6 +8,8 @@ installer, no admin rights for basic scanning, single portable `.exe`.
 
 ![brand](icon.ico)
 
+🆕 **New:** install, update and launch every VaultSoft app from one place — get **[VaultSoft Hub](https://github.com/VaultSoft/vaultsoft-hub/releases/latest)**.
+
 ## Features
 
 - **Network table** — every detected access point with SSID, estimated signal
@@ -59,6 +61,16 @@ results. If it's off, WaveScout shows a clear banner explaining this. Enable it
 under **Settings → Privacy & security → Location**, and the network list and
 channel views populate automatically. Your current-connection details still work
 regardless.
+
+---
+
+## Also by VaultSoft
+
+**[VaultSoft Hub](https://github.com/VaultSoft/vaultsoft-hub)** — install, update and launch every VaultSoft app from one window.
+
+**[PulseMonitor](https://vaultsoft.github.io/PulseMonitor)** — Lightweight real-time PC health monitor for Windows. Track CPU, GPU, RAM, network, and disk stats with a clean desktop overlay and always-on-top gaming widget.
+
+**[SweptPC](https://vaultsoft.github.io/SweptPC)** — Free portable Windows PC cleaner. Remove junk files, browser caches, and system clutter in seconds.
 
 ---
 
