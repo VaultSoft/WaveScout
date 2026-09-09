@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WaveScout v1.0.0 — Free Portable Windows WiFi Analyser (VaultSoft)
+"""WaveScout - Free Portable Windows WiFi Analyser (VaultSoft).
 
 Scans nearby WiFi networks via the built-in Windows ``netsh wlan`` commands
 (no third-party drivers, no admin rights for basic scanning). Shows a live
@@ -17,10 +17,13 @@ import re
 import platform
 import socket
 import subprocess
+import time
+import traceback
 from dataclasses import dataclass, field
 from collections import deque
 from typing import Optional, List, Dict, Deque, Tuple
 
+from app_metadata import APP_NAME, APP_VERSION, PUBLISHER
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QMenu,
@@ -34,9 +37,6 @@ from PyQt6.QtGui import (
 )
 import math as _math
 
-APP_VERSION = "1.0.0"
-APP_NAME    = "WaveScout"
-PUBLISHER   = "VaultSoft"
 REFRESH_MS  = 5_000          # rescan every 5 seconds
 GRAPH_SECS  = 60             # rolling signal history window
 
@@ -197,7 +197,8 @@ class WiFiScanner:
             return (p.stdout or "") + (p.stderr or ""), p.returncode
         except FileNotFoundError:
             return "", -1          # netsh not on PATH
-        except Exception:
+        except Exception as exc:
+            _write_runtime_note_once("netsh-run", f"netsh command failed: {exc}")
             return "", -2
 
     # ── helpers ───────────────────────────────────────────────────
@@ -222,6 +223,9 @@ class WiFiScanner:
         low = out.lower()
         if "there is no wireless interface" in low or "no wireless interface" in low:
             return Connection(), ScanError.NO_ADAPTER
+        if rc != 0:
+            _write_runtime_note_once("netsh-interfaces", out.strip() or f"netsh returned {rc}")
+            return Connection(), ScanError.NETSH
         if "1 interface" not in low and "interface on the system" not in low \
                 and "name" not in low:
             # netsh ran but produced nothing useful
@@ -292,6 +296,9 @@ class WiFiScanner:
         low = out.lower()
         if "there is no wireless interface" in low or "no wireless interface" in low:
             return [], ScanError.NO_ADAPTER
+        if rc != 0:
+            _write_runtime_note_once("netsh-networks", out.strip() or f"netsh returned {rc}")
+            return [], ScanError.NETSH
         nets = self._parse_networks(out)
         if not nets:
             return [], ScanError.EMPTY
@@ -1249,9 +1256,56 @@ QToolTip {{
 
 
 # ══════════════════════════════════════════════════════════════════
+# CRASH / STARTUP LOGGING
+# ══════════════════════════════════════════════════════════════════
+_APP_DATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), APP_NAME)
+os.makedirs(_APP_DATA_DIR, exist_ok=True)
+_CRASH_LOG = os.path.join(_APP_DATA_DIR, "crash.log")
+_RUNTIME_NOTES_LOGGED: set[str] = set()
+
+
+def _timestamp() -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _write_crash(exc_type, exc_value, exc_tb):
+    try:
+        with open(_CRASH_LOG, "a", encoding="utf-8") as f:
+            f.write("\n" + "=" * 70 + "\n")
+            f.write(f"CRASH  {_timestamp()}\n" + "=" * 70 + "\n")
+            f.write("".join(traceback.format_exception(exc_type, exc_value, exc_tb)) + "\n")
+    except Exception:
+        pass
+
+
+def _write_runtime_note_once(key: str, message: str):
+    if key in _RUNTIME_NOTES_LOGGED:
+        return
+    _RUNTIME_NOTES_LOGGED.add(key)
+    try:
+        with open(_CRASH_LOG, "a", encoding="utf-8") as f:
+            f.write(f"\nNOTE   {_timestamp()}\n")
+            f.write(message + "\n")
+    except Exception:
+        pass
+
+
+def _qt_message_handler(mode, context, message):
+    try:
+        if "Critical" not in mode.name and "Fatal" not in mode.name:
+            return
+        with open(_CRASH_LOG, "a", encoding="utf-8") as f:
+            f.write(f"\nQT {mode.name}  {_timestamp()}\n")
+            f.write(f"  {context.file}:{context.line}  {message}\n")
+    except Exception:
+        pass
+
+
+# ══════════════════════════════════════════════════════════════════
 # ENTRY POINT
 # ══════════════════════════════════════════════════════════════════
 def main():
+    sys.excepthook = _write_crash
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
@@ -1261,12 +1315,32 @@ def main():
     app.setStyle("Fusion")
     app.setStyleSheet(global_style())
     app.setWindowIcon(make_brand_icon())
+    from PyQt6.QtCore import qInstallMessageHandler
+    qInstallMessageHandler(_qt_message_handler)
+
+    def _slot_hook(et, ev, etb):
+        _write_crash(et, ev, etb)
+        sys.__excepthook__(et, ev, etb)
+    sys.excepthook = _slot_hook
+
+    try:
+        with open(_CRASH_LOG, "a", encoding="utf-8") as f:
+            f.write(f"\nSTARTUP  {_timestamp()}  v{APP_VERSION}\n")
+    except Exception:
+        pass
 
     win = MainWindow()
     win.show()
     geo = app.primaryScreen().availableGeometry()
     win.move(geo.center() - win.rect().center())
     win.raise_(); win.activateWindow()
+
+    smoke_exit_ms = os.environ.get("WAVESCOUT_SMOKE_EXIT_MS")
+    if smoke_exit_ms:
+        try:
+            QTimer.singleShot(max(0, int(smoke_exit_ms)), win._exit_app)
+        except ValueError:
+            pass
 
     if _IS_WIN:
         try:
@@ -1276,7 +1350,13 @@ def main():
         except Exception:
             pass
 
-    sys.exit(app.exec())
+    try:
+        sys.exit(app.exec())
+    except SystemExit:
+        raise
+    except Exception:
+        _write_crash(*sys.exc_info())
+        raise
 
 
 if __name__ == "__main__":
