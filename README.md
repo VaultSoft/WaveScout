@@ -68,9 +68,11 @@ regardless.
 
 **[VaultSoft Hub](https://github.com/VaultSoft/vaultsoft-hub)** — install, update and launch every VaultSoft app from one window.
 
-**[PulseMonitor](https://vaultsoft.github.io/PulseMonitor)** — Lightweight real-time PC health monitor for Windows. Track CPU, GPU, RAM, network, and disk stats with a clean desktop overlay and always-on-top gaming widget.
+**[ScribeVault](https://vaultsoft.co.uk/scribevault/)** — Offline transcription for Windows. Turns recordings into text on your own PC; nothing is uploaded. Free trial.
 
-**[SweptPC](https://vaultsoft.github.io/SweptPC)** — Free portable Windows PC cleaner. Remove junk files, browser caches, and system clutter in seconds.
+**[PulseMonitor](https://vaultsoft.co.uk/PulseMonitor)** — Lightweight real-time PC health monitor for Windows. Track CPU, GPU, RAM, network, and disk stats with a clean desktop overlay and always-on-top gaming widget.
+
+**[SweptPC](https://vaultsoft.co.uk/SweptPC)** — Free portable Windows PC cleaner. Remove junk files, browser caches, and system clutter in seconds.
 
 ---
 
